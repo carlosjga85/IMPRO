@@ -1,0 +1,273 @@
+package com.ibm.cloudoe.samples;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
+import org.ektorp.CouchDbConnector;
+import org.ektorp.CouchDbInstance;
+import org.ektorp.http.HttpClient;
+import org.ektorp.http.StdHttpClient;
+import org.ektorp.impl.StdCouchDbConnector;
+import org.ektorp.impl.StdCouchDbInstance;
+import org.xml.sax.Attributes;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
+
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+
+import com.ibm.json.java.JSONArray;
+import com.ibm.json.java.JSONObject;
+import com.ibm.cloudoe.samples.SAXHandlerXmlToJson;
+import com.ibm.cloudoe.samples.JsonUtils;
+
+
+/** A class for communicating with the Cloudant datastore. 
+ *  See main() for example usage.
+ *  
+ *  @author Sean Welleck**/
+public class CloudantClient 
+{
+	private HttpClient httpClient;
+	private CouchDbConnector dbc;
+	/*
+	private int port = 443;
+	private String name = "re-java";
+	//private String host;
+	//private String username;
+	//private String password;
+	
+	private JSONArray cloudant;
+	private JSONObject cloudantInstance;
+	private JSONObject cloudantCredentials;
+	
+	// If running locally complete the variables below with the information in VCAP_SERVICES
+	private String username = "21111b18-a73e-425a-89e0-3ca3f6d80f6e-bluemix";
+    private String password = "34eb8f86baf8c12e3e5578261d99b7c07ffb04a17d0328511a2832dd890890d1";
+    private String host = "21111b18-a73e-425a-89e0-3ca3f6d80f6e-bluemix.cloudant.com";
+    //private String port = "443";
+    private String url = "https://21111b18-a73e-425a-89e0-3ca3f6d80f6e-bluemix:34eb8f86baf8c12e3e5578261d99b7c07ffb04a17d0328511a2832dd890890d1@21111b18-a73e-425a-89e0-3ca3f6d80f6e-bluemix.cloudant.com";
+	*/
+	private int port = 443;
+	private String name = "re-java";
+	//private String host;
+	//private String username;
+	//private String password;
+	
+	/*private JSONArray cloudant;
+	private JSONObject cloudantInstance;
+	private JSONObject cloudantCredentials;
+	*/
+	// If running locally complete the variables below with the information in VCAP_SERVICES
+	private String username = "21111b18-a73e-425a-89e0-3ca3f6d80f6e-bluemix";
+    private String password = "34eb8f86baf8c12e3e5578261d99b7c07ffb04a17d0328511a2832dd890890d1";
+    private String host = "21111b18-a73e-425a-89e0-3ca3f6d80f6e-bluemix.cloudant.com";
+    //private String port = "443";
+    private String url = "21111b18-a73e-425a-89e0-3ca3f6d80f6e-bluemix:34eb8f86baf8c12e3e5578261d99b7c07ffb04a17d0328511a2832dd890890d1@21111b18-a73e-425a-89e0-3ca3f6d80f6e-bluemix.cloudant.com";
+	
+	
+	public CloudantClient()
+	{
+		this.httpClient = null;
+
+		//TODO read env VCAP_SERVICES and parse it into JSON
+		/*try {
+			String VCAP_SERVICES = System.getenv("VCAP_SERVICES");
+			JSONObject vcap;
+			vcap = (JSONObject) JSONObject.parse(VCAP_SERVICES);
+			cloudant = (JSONArray) vcap.get("cloudantNoSQLDB");
+			cloudantInstance = (JSONObject) cloudant.get(0);
+			cloudantCredentials = (JSONObject) cloudantInstance.get("credentials");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		this.port =  443; //Config.CLOUDANT_PORT;
+		this.host = (String) cloudantCredentials.get("host");
+		this.username = (String) cloudantCredentials.get("username");
+		this.password = (String) cloudantCredentials.get("password"); 
+ 		this.name =  "re-java"; //Config.CLOUDANT_NAME; */
+		
+		System.out.println("username " + this.username);
+		
+		this.dbc = this.createDBConnector();
+	}
+	
+	/** Put a Person into Cloudant using person.name as the unique id.
+	 *  Stored as :
+	 *  { 
+	 *  	id: person.name, 
+	 *  	type: Person.class, 
+	 *  	group: person.group, 
+	 *  	json: toJSON(person) 
+	 *  }
+	 */
+	public void putText(NewsText n)
+	{
+		HashMap<String, Object> data = new HashMap<String, Object>();
+		String _id = n._id;
+		String itemid = n.itemid;
+		String title =  n.title;
+		List <String> text = n.pList;
+		
+		data.put("_id", _id);
+		data.put("Title", title);
+		data.put("Text", text);
+		data.put("itemid", itemid);
+		//System.out.println(data.get(Constants.TYPE_KEY));
+		//data.put(Constants.JSON_KEY, JsonUtils.getJson(p));
+		
+		this.putItem(data);
+	}
+	
+	
+	// Get a Person from Cloudant using name as the unique id. 
+
+	public NewsText getNews(String name)
+	{
+		//name = name.toUpperCase();
+		
+		/*@SuppressWarnings("unchecked")
+		HashMap<String, Object> obj = this.dbc.get(HashMap.class, name);
+		NewsText n = JsonUtils.getNewsFromJson((String)obj.get("_id"));
+		return n;
+		*/
+		/*
+		List<String> docIds = dbc.getAllDocIds();
+		System.out.println("All Docs: ");
+		for(String docId : docIds)
+		{
+			System.out.println(docId);
+		}*/
+		
+		//InputStream doc = this.dbc.getAsStream(name);
+		NewsText n = this.dbc.get(NewsText.class, name);
+		return n;
+	}
+
+	
+	/** Put a generic item modeled as Key-Value pairs into Cloudant. **/
+	private void putItem(HashMap<String, Object> data)
+	{
+		if (data == null) 
+		{ 
+			System.err.println("data cannot be null in putItem()"); 
+			return;
+		}
+		String id = (String)data.get("itemid");
+		if (id == null)   
+		{ 
+			System.err.println("data must have an _id field."); 
+			return;
+		}
+		if (this.dbc.contains(id)) 
+		{ 
+			System.err.println("Didn't putItem. _id=" + id + " already exists."); 
+			return;
+		}
+		this.dbc.create(data);
+		System.out.println("Put _id=" + id + " into the datastore."); 
+	}
+	
+	private CouchDbConnector createDBConnector() 
+	{
+		CouchDbInstance dbInstance = null;
+		
+		System.out.println("Creating CouchDB instance...");
+		System.out.println(this.username);
+		this.httpClient = new StdHttpClient.Builder()
+		.host(this.host)
+		.port(this.port)
+		.username(this.username)
+		.password(this.password)
+		.enableSSL(true)
+		.relaxedSSLSettings(true)
+		.build();
+		
+		System.out.println("Entrando.....");
+		dbInstance = new StdCouchDbInstance(this.httpClient);
+		System.out.println("Entrando2.....");
+		CouchDbConnector dbc = new StdCouchDbConnector(this.name, dbInstance);
+		System.out.println("Entrando3.....");
+		dbc.createDatabaseIfNotExists();
+		System.out.println("Conected.....");
+		return dbc;
+	}
+	
+	private void closeDBConnector()
+	{
+		if (httpClient != null)
+		{
+			httpClient.shutdown();
+		}
+	}
+	
+	/** Example usage. **/
+	public static void main(String[] args) throws Exception
+	{
+		CloudantClient cc = new CloudantClient();
+		SAXParserFactory parserFactor = SAXParserFactory.newInstance();
+	    SAXParser parser = parserFactor.newSAXParser();
+	    
+		
+		/*NewsText myn = new NewsText(); 
+		myn.itemid = "100010";
+		myn.title = "USA: U.S. senator says LA mayor diverted airport funds.";
+		myn.text = "A key U.S. senator charged on Monday that Los Angeles Mayor Richard Riordan diverted over $31 million in federal airport funds hours before Congress voted to bar such moves by localities. Sen. John McCain, R-Ariz., said in a two-page letter to Riordan that the mayor improperly diverted U.S. funds targeted for Los Angeles International Airport to pay city police and firefighters and other bills. the spirit of a federal aviation bill approved by Congress on Oct. 3, said McCain, chairman of the aviation subpanel of the Senate Commerce Committee. McCain said, adding he would ask Secretary of Transportation Federico Pena to use all his authority to resolve the situation. McCain said if Los Angeles did not return the $31 million, he would push to have the city's federal airport funding slashed by that amount. John Driscoll, executive director of the Los Angeles Department of Airports, defended the fund transfer. Title 8 of the congressionally passed airport bill, which President Clinton is expected to sign this week, strengthens federal laws that bar municipalities from diverting federal airport dollars. Under the bill, the Federal Aviation Reauthorization Act of 1996, cities can ask the federal government to reimburse them for contributions they have made to airports for the past six years. Mayor Riordan contends the federal government owes Los Angeles millions of dollars for city purchases of airport land dating back 70 years ago, McCain's office said. Riordan's office had no immediate response. McCain first introduced language in May to reverse what he called an alarming trend by localities to divert airport dollars for non-airport purposes. He said over $170 million has been diverted by at least 23 airport sponsors between 1992 and 1995, according to a recent audit by the inspector general of the Transportation Department.";
+		*/
+		/*String path = "C:/Users/Carlos Jesus/Documents/Germany/TU-Berlin/Semestre 1/IMPRO/Nueva carpeta/";
+		//String file = "newsML.xml";
+		
+		File dirXml  = new File(path);
+	    String[] xmlfiles = dirXml.list();
+	    	   
+	    
+	    for (int i=0; i<xmlfiles.length; i++){
+	        if(xmlfiles[i].contains(".xml") ) {
+	        	String xmlFile = path + xmlfiles[i];
+	        	
+	        	SAXHandlerXmlToJson handler = new SAXHandlerXmlToJson();
+	            parser.parse(new File(xmlFile), handler);
+	        	
+	        	for ( NewsText emp : handler.empList){
+		               
+	        		emp._id = xmlfiles[i];
+	        		System.out.println("_ID: " + emp._id);
+	        		System.out.println("ITEMID: " +emp.itemid);
+	        		System.out.println("DATELINE: " +emp.dateline);
+	        		System.out.println("TITLE: " +emp.title);
+	        		System.out.println("HEADLINE: " +emp.headline);	        		
+	        		System.out.print("TEXT: ");
+	        		for (String p : emp.pList) {
+	        			p = p.replace("\"", " ");
+						System.out.print(p + " ");
+					}
+	        		cc.putText(emp);
+	        	}	        	
+	        }
+	    }
+	    //System.out.println("] }");
+	    */
+	    NewsText emp = new NewsText();
+		String qName = "100001newsML.xml";
+		
+		
+		emp = cc.getNews(qName);
+		/*System.out.println("_ID: " + emp._id);
+		System.out.println("ITEMID: " +emp.itemid);
+		System.out.println("DATELINE: " +emp.dateline);
+		System.out.println("TITLE: " +emp.title);
+		System.out.println("HEADLINE: " +emp.headline);	        		
+		System.out.print("TEXT: ");
+		for (String p : emp.pList) {
+			p = p.replace("\"", " ");
+			System.out.print(p + " ");
+		}*/
+		cc.closeDBConnector();
+	}
+	
+	
+}
